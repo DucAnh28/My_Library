@@ -1,13 +1,15 @@
 package org.example.service;
 
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
+import javax.imageio.ImageIO;
 
-public class AdvancedImageDownloader {
+public class ImageDownloaderV2 {
     /**
      * Tải ảnh từ URL với nhiều cài đặt nâng cao
      * @param imageUrl URL của ảnh
@@ -26,8 +28,8 @@ public class AdvancedImageDownloader {
             connection.setRequestProperty("Accept", "image/webp,*/*");
             connection.setRequestProperty("Accept-Language", "en-US,en;q=0.5");
             connection.setRequestProperty("Referer", url.getProtocol() + "://" + url.getHost());
-            connection.setConnectTimeout(10000);
-            connection.setReadTimeout(10000);
+            connection.setConnectTimeout(20000); // Tăng thời gian chờ kết nối
+            connection.setReadTimeout(20000);    // Tăng thời gian đọc dữ liệu
 
             // Kiểm tra kết nối
             int responseCode = connection.getResponseCode();
@@ -49,9 +51,10 @@ public class AdvancedImageDownloader {
             File saveFile = new File(savePath);
             Files.createDirectories(saveFile.getParentFile().toPath());
 
-            // Tải và lưu file
+            // Tải và lưu file tạm thời
+            File tempFile = new File("temp_image" + fileExtension);
             try (InputStream inputStream = connection.getInputStream();
-                 FileOutputStream outputStream = new FileOutputStream(saveFile)) {
+                 FileOutputStream outputStream = new FileOutputStream(tempFile)) {
 
                 byte[] buffer = new byte[4096];
                 int bytesRead;
@@ -59,6 +62,16 @@ public class AdvancedImageDownloader {
                     outputStream.write(buffer, 0, bytesRead);
                 }
             }
+
+            // Kiểm tra xem file tải về có phải là ảnh hợp lệ không
+            BufferedImage image = ImageIO.read(tempFile);
+            if (image == null) {
+                System.err.println("Dữ liệu tải về không phải là hình ảnh hợp lệ.");
+                return null;
+            }
+
+            // Di chuyển file tạm thời đến vị trí lưu chính thức
+            Files.move(tempFile.toPath(), saveFile.toPath());
 
             System.out.println("Tải ảnh thành công: " + savePath);
             return saveFile;
